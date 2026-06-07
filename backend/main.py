@@ -59,3 +59,20 @@ async def get_sources():
         cursor = await db.execute("SELECT * FROM sources")
         sources = await cursor.fetchall()
         return [dict(s) for s in sources]
+
+
+@app.get("/articles")
+async def get_articles():
+    from backend.database import get_db
+
+    async with get_db() as db:
+        cursor = await db.execute(
+            """
+            SELECT a.*, s.name as source_name
+            FROM articles a
+            JOIN sources s ON a.source_id = s.id
+            ORDER BY a.published_at DESC
+            """
+        )
+        articles = await cursor.fetchall()
+        return [dict(a) for a in articles]
