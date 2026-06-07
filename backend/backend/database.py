@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS articles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     url TEXT NOT NULL UNIQUE,
     title TEXT NOT NULL,
+    translated_title TEXT,
     source_id INTEGER NOT NULL,
     published_at TIMESTAMP,
     content TEXT,

@@ -75,7 +75,14 @@ async def get_articles():
             """
         )
         articles = await cursor.fetchall()
-        return [dict(a) for a in articles]
+        result = []
+        for a in articles:
+            article = dict(a)
+            # Fallback to original title if translated_title is null
+            if article["translated_title"] is None:
+                article["translated_title"] = article["title"]
+            result.append(article)
+        return result
 
 
 @app.get("/articles/{article_id}")

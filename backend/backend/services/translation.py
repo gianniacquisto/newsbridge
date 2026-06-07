@@ -25,6 +25,13 @@ Article content:
 {content}
 """
 
+TITLE_TRANSLATION_PROMPT = """\
+Translate this news article title from {source_lang} to {target_lang}:
+
+{title}
+
+Output ONLY the translated title, nothing else."""
+
 
 async def translate_article(
     title: str,
@@ -57,4 +64,36 @@ async def translate_article(
             return data["choices"][0]["text"].strip()
     except Exception:
         logger.exception("Translation failed for: %s", title)
+        return None
+
+
+async def translate_title(
+    title: str,
+    source_language: str,
+    target_language: str,
+) -> str | None:
+    """Translate a short article title via the llama.cpp server."""
+    prompt = TITLE_TRANSLATION_PROMPT.format(
+        source_lang=source_language,
+        target_lang=target_language,
+        title=title,
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{settings.llama_server_url}/v1/completions",
+                json={
+                    "model": settings.llm_model,
+                    "prompt": prompt,
+                    "max_tokens": 200,
+                    "temperature": settings.llm_temperature,
+                    "stop": [],
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["text"].strip()
+    except Exception:
+        logger.exception("Title translation failed for: %s", title)
         return None
