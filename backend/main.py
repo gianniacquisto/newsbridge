@@ -4,6 +4,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.database import init_db
 from backend.services.polling import start_polling, stop_polling
 
 # --- App startup/shutdown ---
@@ -11,6 +12,7 @@ from backend.services.polling import start_polling, stop_polling
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await init_db()
     scheduler = AsyncIOScheduler()
     app.state.scheduler = scheduler
     start_polling(scheduler)

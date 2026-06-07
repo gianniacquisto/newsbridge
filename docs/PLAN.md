@@ -41,7 +41,7 @@ A news aggregation app that ingests Belgian RSS feeds and translates articles to
 │  │  └──────────┘  └──────────┘  └───────────────┘  │  │
 │  └─────────────────────────────────────────────────┘  │
 └────────────────────────┬─────────────────────────────┘
-                         │ HTTP (Vite proxy in Docker)
+                         │ HTTP (localhost:9000)
                          ▼
 ┌──────────────────────────────────────────────────────┐
 │              DOCKER COMPOSE (monorepo)                │
@@ -385,6 +385,8 @@ docker compose up --build
 # Frontend: http://localhost:5173
 # API Docs: http://localhost:9000/docs
 ```
+
+**Linux Docker:** `host.docker.internal` requires `extra_hosts: host-gateway` in docker-compose.yml (already included).
 
 ### Development Mode (without Docker)
 ```bash

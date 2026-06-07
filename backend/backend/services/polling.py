@@ -15,6 +15,17 @@ logger = logging.getLogger(__name__)
 TARGET_LANGUAGE = "en"
 
 
+def _parse_published(parsed):
+    """Convert a time.struct_time to ISO format string, or return None."""
+    if parsed is None:
+        return None
+    try:
+        import datetime
+        return datetime.datetime(*parsed[:6]).isoformat()
+    except (ValueError, TypeError):
+        return None
+
+
 async def _fetch_feed(source: dict) -> list[dict]:
     """Fetch a single RSS feed and return list of articles."""
     feed = feedparser.parse(source["url"])
@@ -24,7 +35,7 @@ async def _fetch_feed(source: dict) -> list[dict]:
         articles.append({
             "url": entry.get("link", ""),
             "title": entry.get("title", ""),
-            "published": entry.get("published_parsed"),
+            "published": _parse_published(entry.get("published_parsed")),
             "content": entry.get("summary", "") or entry.get("content", [{}])[0].get("value", ""),
             "source_language": source.get("source_language"),
         })
@@ -61,12 +72,7 @@ async def _translate_titles():
     async with get_db() as db:
         # Find articles without translated titles
         cursor = await db.execute(
-            """
-            SELECT a.id, a.title, a.source_language
-            FROM articles a
-            LEFT JOIN articles a2 ON a.url = a2.url AND a2.translated_title IS NOT NULL
-            WHERE a.translated_title IS NULL
-            """
+            "SELECT id, title, source_language FROM articles WHERE translated_title IS NULL"
         )
         articles = await cursor.fetchall()
 
@@ -102,7 +108,8 @@ async def _translate_titles():
 async def poll_all():
     """Fetch all RSS feeds and store new articles, then translate titles."""
     async with get_db() as db:
-        sources = await db.execute("SELECT * FROM sources").fetchall()
+        cursor = await db.execute("SELECT * FROM sources")
+        sources = await cursor.fetchall()
 
         for source in sources:
             try:

@@ -41,6 +41,10 @@ docker compose up --build
 - **Backend API:** http://localhost:9000
 - **Frontend:** http://localhost:5173
 
+## Known Setup Notes
+
+- **Linux Docker:** The `extra_hosts` config in `docker-compose.yml` maps `host.docker.internal` to the host gateway, required on Linux for the backend to reach llama-server.
+
 ## Architecture
 
 ```
@@ -52,4 +56,4 @@ newsbridge/
 └── README.md
 ```
 
-The llama.cpp `llama-server` runs on the host machine. Docker services connect to it via `host.docker.internal`.
+The llama.cpp `llama-server` runs on the host machine. Docker services connect to it via `host.docker.internal` (Linux: via `extra_hosts`). The frontend is built as a static SPA with the API URL baked in at build time.
