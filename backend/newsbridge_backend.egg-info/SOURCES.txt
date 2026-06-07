@@ -1,0 +1,14 @@
+pyproject.toml
+backend/__init__.py
+backend/config.py
+backend/database.py
+backend/models.py
+backend/services/__init__.py
+backend/services/polling.py
+backend/services/translation.py
+newsbridge_backend.egg-info/PKG-INFO
+newsbridge_backend.egg-info/SOURCES.txt
+newsbridge_backend.egg-info/dependency_links.txt
+newsbridge_backend.egg-info/requires.txt
+newsbridge_backend.egg-info/top_level.txt
+tests/test_sources.py

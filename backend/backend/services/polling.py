@@ -2,7 +2,7 @@
 
 import logging
 
-from apscheduler.schedulers.base import Scheduler
+from typing import Any
 import feedparser
 
 from backend.database import get_db
@@ -68,7 +68,7 @@ async def poll_all():
                 logger.exception("Failed to fetch %s", source["name"])
 
 
-def start_polling(scheduler: Scheduler):
+def start_polling(scheduler: Any):
     """Start the RSS polling scheduler."""
     scheduler.add_job(
         poll_all,
@@ -80,7 +80,7 @@ def start_polling(scheduler: Scheduler):
     logger.info("Polling started (every %d min)", settings.poll_interval)
 
 
-def stop_polling(scheduler: Scheduler):
+def stop_polling(scheduler: Any):
     """Stop the scheduler."""
     try:
         scheduler.shutdown(wait=False)

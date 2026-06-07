@@ -35,7 +35,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Placeholder routes (will be fleshed out) ---
+# --- Placeholder routes ---
 
 
 @app.get("/")
@@ -48,8 +48,14 @@ async def health():
     return {"status": "ok"}
 
 
-# --- API routes (to be implemented) ---
-# @app.get("/articles")
-# @app.get("/articles/{article_id}")
-# @app.post("/articles/{article_id}/translate")
-# @app.get("/sources")
+# --- API routes ---
+
+
+@app.get("/sources")
+async def get_sources():
+    from backend.database import get_db
+
+    async with get_db() as db:
+        cursor = await db.execute("SELECT * FROM sources")
+        sources = await cursor.fetchall()
+        return [dict(s) for s in sources]
