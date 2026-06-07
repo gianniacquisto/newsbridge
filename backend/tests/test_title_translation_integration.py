@@ -13,7 +13,7 @@ async def mock_llama_server():
     mock_response = MagicMock()
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {
-        "choices": [{"text": "Translated Title"}]
+        "choices": [{"message": {"content": "Translated Title"}}]
     }
     
     # Create a mock async client
@@ -53,7 +53,9 @@ def test_polling_translates_titles(mock_llama_server, client):
     async def _translate():
         from backend.services.polling import _translate_titles
 
-        await _translate_titles()
+        tasks = await _translate_titles()
+        if tasks:
+            await asyncio.gather(*tasks)
 
     import asyncio
     loop = asyncio.new_event_loop()
@@ -64,7 +66,7 @@ def test_polling_translates_titles(mock_llama_server, client):
     finally:
         loop.close()
 
-    response = client.get("/articles")
+    response = client.get("/api/articles")
     assert response.status_code == 200
 
     articles = response.json()

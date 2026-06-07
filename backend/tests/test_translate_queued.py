@@ -30,7 +30,7 @@ async def article_needing_translation(client):
 
 def test_translate_triggers_new_translation(client, article_needing_translation):
     """POST /articles/{id}/translate returns queued when no translation exists."""
-    response = client.post(f"/articles/{article_needing_translation}/translate")
+    response = client.post(f"/api/articles/{article_needing_translation}/translate")
     assert response.status_code == 200
 
     data = response.json()

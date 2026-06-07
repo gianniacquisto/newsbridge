@@ -31,7 +31,7 @@ async def article_with_translated_title(client):
 
 def test_get_articles_returns_translated_title(client, article_with_translated_title):
     """GET /articles returns translated_title when available."""
-    response = client.get("/articles")
+    response = client.get("/api/articles")
     assert response.status_code == 200
 
     articles = response.json()
@@ -67,7 +67,7 @@ def test_get_articles_fallback_to_original_when_no_translation(client):
     import asyncio
     asyncio.get_event_loop().run_until_complete(_insert())
 
-    response = client.get("/articles")
+    response = client.get("/api/articles")
     assert response.status_code == 200
 
     articles = response.json()

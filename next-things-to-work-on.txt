@@ -1,0 +1,5 @@
+- show original language next to translation
+- home button to get back home
+- tagging of article based on content, create categories to filter on
+- basic sorting and filtering on articles
+- language choosing option for the user

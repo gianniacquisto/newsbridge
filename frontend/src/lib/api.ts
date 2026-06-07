@@ -39,7 +39,11 @@ export async function getArticle(id: number) {
 }
 
 export async function translateArticle(id: number) {
-  return fetchJSON<{ translation_id: number }>(`/articles/${id}/translate`);
+  const res = await fetch(`${API_BASE}/articles/${id}/translate`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
 }
 
 export async function getSources() {

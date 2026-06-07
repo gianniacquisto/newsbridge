@@ -30,7 +30,7 @@ async def article_without_translation(client):
 
 def test_get_article_without_translation(client, article_without_translation):
     """GET /articles/{id} returns null translation when none exists."""
-    response = client.get(f"/articles/{article_without_translation}")
+    response = client.get(f"/api/articles/{article_without_translation}")
     assert response.status_code == 200
 
     data = response.json()
@@ -40,5 +40,5 @@ def test_get_article_without_translation(client, article_without_translation):
 
 def test_get_nonexistent_article(client):
     """GET /articles/{id} returns 404 for unknown article."""
-    response = client.get("/articles/99999")
+    response = client.get("/api/articles/99999")
     assert response.status_code == 404

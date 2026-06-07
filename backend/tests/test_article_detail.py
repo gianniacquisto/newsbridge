@@ -42,7 +42,7 @@ async def article_with_translation(client):
 
 def test_get_article_with_translation(client, article_with_translation):
     """GET /articles/{id} returns the article with its cached translation."""
-    response = client.get(f"/articles/{article_with_translation}")
+    response = client.get(f"/api/articles/{article_with_translation}")
     assert response.status_code == 200
 
     data = response.json()

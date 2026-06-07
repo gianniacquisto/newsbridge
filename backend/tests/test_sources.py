@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 def test_get_sources_returns_belgian_news_sources(client: TestClient):
     """GET /sources returns the configured Belgian news sources."""
-    response = client.get("/sources")
+    response = client.get("/api/sources")
     assert response.status_code == 200
 
     sources = response.json()

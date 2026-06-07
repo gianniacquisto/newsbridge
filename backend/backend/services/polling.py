@@ -11,6 +11,23 @@ from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Track background translation tasks so they are not garbage-collected
+_active_translation_tasks: set[asyncio.Task] = set()
+
+
+def _on_translation_done(task: asyncio.Task) -> None:
+    """Log errors from finished background translation tasks and untrack them."""
+    if error := task.exception():
+        logger.exception("Background translation task failed")
+    _active_translation_tasks.discard(task)
+
+
+def _launch_background(fn, *args, **kwargs):
+    """Launch a coroutine as a background task with tracking."""
+    task = asyncio.create_task(fn(*args, **kwargs))
+    _active_translation_tasks.add(task)
+    task.add_done_callback(_on_translation_done)
+
 # Target language for title translation (global setting)
 TARGET_LANGUAGE = "en"
 
@@ -65,48 +82,73 @@ async def _store_articles(source_id: int, source_lang: str, articles: list[dict]
         await db.commit()
 
 
-async def _translate_titles():
-    """Translate titles for articles that don't have a translated title yet."""
+async def _translate_article(article_id: int) -> None:
+    """Translate a single article's title and save the result."""
     from backend.services.translation import translate_title
 
     async with get_db() as db:
-        # Find articles without translated titles
+        cursor = await db.execute(
+            "SELECT id, title, source_language FROM articles WHERE id = ? AND translated_title IS NULL",
+            (article_id,),
+        )
+        art_row = await cursor.fetchone()
+        if not art_row:
+            logger.info("Article %d already has a translated title or does not exist", article_id)
+            return
+
+        title = art_row["title"]
+        source_lang = art_row["source_language"]
+        logger.info("Translating title: '%s'", title)
+
+        translated_title = await translate_title(title, source_lang, TARGET_LANGUAGE)
+
+        if not translated_title:
+            logger.error("Title translation returned None for article %d", article_id)
+            return
+
+        # Double-check: another background task may have beaten us here
+        async with get_db() as db2:
+            cursor = await db2.execute(
+                "SELECT id FROM articles WHERE id = ? AND translated_title IS NULL",
+                (article_id,),
+            )
+            still_pending = await cursor.fetchone()
+            if not still_pending:
+                logger.info("Article %d was already translated by a concurrent task", article_id)
+                return
+
+            await db2.execute(
+                "UPDATE articles SET translated_title = ? WHERE id = ?",
+                (translated_title, article_id),
+            )
+            await db2.commit()
+            logger.info("Translated title: '%s' -> '%s'", title, translated_title)
+
+
+async def _translate_titles() -> list[asyncio.Task]:
+    """Translate titles for articles that don't have a translated title yet.
+
+    Returns the list of created tasks so callers can await them (e.g. in tests).
+    In production this is wrapped by _launch_background for fire-and-forget behaviour.
+    """
+    async with get_db() as db:
         cursor = await db.execute(
             "SELECT id, title, source_language FROM articles WHERE translated_title IS NULL"
         )
         articles = await cursor.fetchall()
 
-        # Batch translate titles (limit to avoid overwhelming the LLM)
-        batch_size = 5
-        for i in range(0, len(articles), batch_size):
-            batch = articles[i:i + batch_size]
-            tasks = []
-            for art in batch:
-                tasks.append(translate_title(
-                    art["title"],
-                    art["source_language"],
-                    TARGET_LANGUAGE,
-                ))
+    tasks: list[asyncio.Task] = []
+    for art in articles:
+        task = asyncio.create_task(_translate_article(art["id"]))
+        task.add_done_callback(_on_translation_done)
+        tasks.append(task)
 
-            translated = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # Update articles with translated titles
-            async with get_db() as db:
-                for art, trans_title in zip(batch, translated):
-                    if isinstance(trans_title, Exception):
-                        logger.exception("Title translation failed for article %d", art["id"])
-                        continue
-                    if trans_title:
-                        await db.execute(
-                            "UPDATE articles SET translated_title = ? WHERE id = ?",
-                            (trans_title, art["id"]),
-                        )
-                        await db.commit()
-                        logger.info("Translated title: '%s' -> '%s'", art["title"], trans_title)
+    logger.info("Launched %d title translation(s) in background", len(tasks))
+    return tasks
 
 
 async def poll_all():
-    """Fetch all RSS feeds and store new articles, then translate titles."""
+    """Fetch all RSS feeds and store new articles."""
     async with get_db() as db:
         cursor = await db.execute("SELECT * FROM sources")
         sources = await cursor.fetchall()
@@ -124,8 +166,8 @@ async def poll_all():
             except Exception:
                 logger.exception("Failed to fetch %s", source["name"])
 
-    # Translate titles for newly fetched articles
-    await _translate_titles()
+    # Launch title translation as a background task (non-blocking)
+    _launch_background(_translate_titles)
 
 
 def start_polling(scheduler: Any):

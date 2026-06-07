@@ -58,7 +58,7 @@ async def articles_with_sources(client):
 
 def test_get_articles_returns_sorted_by_newest(client, articles_with_sources):
     """GET /articles returns articles sorted by most recent first."""
-    response = client.get("/articles")
+    response = client.get("/api/articles")
     assert response.status_code == 200
 
     articles = response.json()

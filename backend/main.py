@@ -126,16 +126,22 @@ async def translate_article(article_id: int):
     from backend.database import get_db
 
     async with get_db() as db:
-        # Check for existing completed translation
+        # Check if already translated
         cursor = await db.execute(
-            "SELECT * FROM translations WHERE article_id = ? AND status = 'completed'",
+            "SELECT id, title, translated_title FROM articles WHERE id = ?",
             (article_id,),
         )
-        translation_row = await cursor.fetchone()
-        if translation_row:
-            return dict(translation_row)
+        art_row = await cursor.fetchone()
+        if not art_row:
+            raise HTTPException(status_code=404, detail="Article not found")
 
-        # No cached translation — trigger translation
-        return {"status": "queued"}
+        # If already translated, return existing
+        if art_row["translated_title"] is not None:
+            return {"article_id": article_id, "translated_title": art_row["translated_title"]}
+
+    # Trigger background translation
+    from backend.services.polling import _translate_article, _launch_background
+    _launch_background(_translate_article, article_id)
+    return {"status": "queued", "article_id": article_id}
 
 app.include_router(api_router)
