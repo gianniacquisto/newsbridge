@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.3
 
     # RSS polling
-    poll_interval: int = 30  # minutes
+    poll_interval: int = 1  # minutes
 
     # Database
     database_url: str = "sqlite+aiosqlite:///./data/newsbridge.db"
