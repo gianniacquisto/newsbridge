@@ -1,8 +1,16 @@
 # Newsbridge
 
-Belgian news, translated to your language.
+> Belgian news, translated to your language.
+> Democratizing news reporting across Belgium's linguistic divide.
 
 A news aggregation app that scrapes Belgian RSS feeds and translates articles to the user's preferred language — democratizing news reporting across Belgium's linguistic divide.
+
+## Status
+
+**Backend: Complete ✅** — 10/10 tests passing
+**Frontend: In Progress** — UI components scaffolded, needs API wiring
+
+See [docs/PLAN.md](docs/PLAN.md) for the full implementation plan and current status.
 
 ## Stack
 

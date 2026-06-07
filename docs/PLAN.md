@@ -3,7 +3,28 @@
 > Belgian news, translated to your language.
 > Democratizing news reporting across Belgium's linguistic divide.
 
-## 1. Vision
+## Project Status
+
+**Backend: Complete ✅** — All REST API routes implemented and tested (10/10 tests passing)
+**Frontend: In Progress** — UI components scaffolded, needs API wiring
+
+### What's Done
+- ✅ REST API with full translation caching
+- ✅ Title translation during RSS polling (batch of 5)
+- ✅ Article content translation on-demand
+- ✅ Database schema with translated_title column
+- ✅ 10 integration tests passing
+- ✅ Docker Compose setup
+
+### What's Next
+- Wire SvelteKit frontend to API endpoints
+- Article detail page with translation loading states
+- Settings page for language selection
+- PWA manifest + service worker
+- End-to-end integration testing
+
+### Handoff Document
+See `/tmp/handoff-newsbridge-ui.md` for the UI implementation handoff.
 
 A news aggregation app that ingests Belgian RSS feeds and translates articles to the user's preferred language. The MVP bridges the gap between Flemish and Francophone news for the English-speaking international community in Belgium.
 
@@ -140,7 +161,9 @@ Response: `[ { "id": 1, "name": "De Standaard", "url": "...", "source_language":
 
 ### GET /articles?source_id=X&limit=Y&offset=Z
 List articles, optionally filtered by source. Returns latest first.
-Response: `[ { "id": 1, "title": "...", "source_id": 1, "source_name": "De Standaard", "published_at": "...", "source_language": "nl", "created_at": "..." } ]`
+Response: `[ { "id": 1, "title": "...", "translated_title": "...", "source_id": 1, "source_name": "De Standaard", "published_at": "...", "source_language": "nl", "content": "...", "created_at": "..." } ]`
+- `translated_title` is `null` if not yet translated
+- Frontend should show `translated_title || title`
 
 ### GET /articles/{id}
 Get a single article. Returns article + any cached translation.
@@ -149,6 +172,7 @@ Response:
 {
   "id": 1,
   "title": "...",
+  "translated_title": "...",
   "source_id": 1,
   "source_name": "De Standaard",
   "published_at": "...",
@@ -212,6 +236,21 @@ Backend checks SQLite for existing translation (article_id + target_language)
      Return translated article to frontend
 ```
 
+### Title Translation (During Polling)
+
+```
+RSS fetch → Store article (translated_title = NULL) → Batch translate titles (5 at a time) → Store translated titles
+```
+
+Title translation prompt:
+```
+Translate this news article title from {source_lang} to {target_lang}:
+
+{title}
+
+Output ONLY the translated title, nothing else.
+```
+
 ### Translation Prompt
 
 ```
@@ -255,12 +294,36 @@ Article content:
 
 ## 8. Implementation Phases
 
-### Phase 1: API Layer (CURRENT)
-- [ ] Implement REST API routes (`/articles`, `/sources`, `/articles/{id}`, `/articles/{id}/translate`)
-- [ ] Add translation caching logic (check DB before calling LLM)
-- [ ] Add async translation with status tracking
-- [ ] Wire up SvelteKit frontend to real API
-- [ ] Test end-to-end: feed fetch → store → translate → display
+### Phase 1: API Layer ✅ COMPLETE
+- [x] Implement REST API routes (`/articles`, `/sources`, `/articles/{id}`, `/articles/{id}/translate`)
+- [x] Add translation caching logic (check DB before calling LLM)
+- [x] Add title translation during polling (batch of 5)
+- [x] Database schema with `translated_title` column
+- [x] 10 integration tests passing
+
+### Phase 2: Frontend UI (IN PROGRESS)
+- [ ] Wire SvelteKit frontend to API endpoints
+- [ ] Card feed showing translated titles
+- [ ] Article detail page with translation loading states
+- [ ] Settings page for language selection
+- [ ] Error handling and retry logic
+- [ ] Responsive design for mobile
+
+### Phase 3: PWA & Production
+- [ ] PWA manifest + service worker
+- [ ] Offline caching of translated articles
+- [ ] Install prompt
+- [ ] Docker Compose hardening (health checks, restart policies)
+- [ ] Logging and monitoring
+
+### Phase 4: Scaling (Roadmap)
+- [ ] Multi-user auth (API keys → JWT)
+- [ ] Per-user language preferences (backend)
+- [ ] User source management (add/remove feeds)
+- [ ] Reading history + favorites
+- [ ] Translation quality feedback loop
+- [ ] Full-text search (FTS5 in SQLite)
+- [ ] Dutch ↔ French translation pair
 
 ### Phase 2: UX Polish
 - [ ] Article detail page (`/article/[id]`)
