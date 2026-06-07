@@ -83,46 +83,80 @@ async def _store_articles(source_id: int, source_lang: str, articles: list[dict]
 
 
 async def _translate_article(article_id: int) -> None:
-    """Translate a single article's title and save the result."""
-    from backend.services.translation import translate_title
+    """Translate a single article's title and full content."""
+    from backend.services.translation import translate_article, translate_title
 
     async with get_db() as db:
         cursor = await db.execute(
-            "SELECT id, title, source_language FROM articles WHERE id = ? AND translated_title IS NULL",
+            "SELECT id, title, source_language, content FROM articles WHERE id = ?",
             (article_id,),
         )
         art_row = await cursor.fetchone()
         if not art_row:
-            logger.info("Article %d already has a translated title or does not exist", article_id)
+            logger.info("Article %d does not exist", article_id)
             return
 
         title = art_row["title"]
         source_lang = art_row["source_language"]
-        logger.info("Translating title: '%s'", title)
+        content = art_row["content"]
 
+        # --- Translate title ---
+        cursor = await db.execute(
+            "SELECT id FROM articles WHERE id = ? AND translated_title IS NULL",
+            (article_id,),
+        )
+        if not await cursor.fetchone():
+            logger.info("Article %d already has a translated title", article_id)
+            return
+
+        logger.info("Translating title: '%s'", title)
         translated_title = await translate_title(title, source_lang, TARGET_LANGUAGE)
 
-        if not translated_title:
-            logger.error("Title translation returned None for article %d", article_id)
+        # --- Translate content ---
+        logger.info("Translating content for article %d", article_id)
+        translated_content = None
+        if content:
+            translated_content = await translate_article(
+                title, content, source_lang, TARGET_LANGUAGE,
+            )
+
+        if not translated_title and not translated_content:
+            logger.error("Both title and content translation returned None for article %d", article_id)
             return
 
         # Double-check: another background task may have beaten us here
         async with get_db() as db2:
             cursor = await db2.execute(
-                "SELECT id FROM articles WHERE id = ? AND translated_title IS NULL",
+                "SELECT id, translated_title FROM articles WHERE id = ?",
                 (article_id,),
             )
-            still_pending = await cursor.fetchone()
-            if not still_pending:
-                logger.info("Article %d was already translated by a concurrent task", article_id)
+            existing = await cursor.fetchone()
+            if not existing:
+                logger.info("Article %d was deleted", article_id)
                 return
 
-            await db2.execute(
-                "UPDATE articles SET translated_title = ? WHERE id = ?",
-                (translated_title, article_id),
-            )
+            # Save translated content to translations table (upsert)
+            if translated_content:
+                await db2.execute(
+                    "UPDATE translations SET translated_content = ?, status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE article_id = ?",
+                    (translated_content, article_id),
+                )
+                if db2.total_changes == 0:
+                    await db2.execute(
+                        "INSERT INTO translations (article_id, target_language, translated_content, status, completed_at) VALUES (?, ?, ?, 'completed', CURRENT_TIMESTAMP)",
+                        (article_id, TARGET_LANGUAGE, translated_content),
+                    )
+
+            # Save translated title if we got one
+            if translated_title and existing["translated_title"] is None:
+                await db2.execute(
+                    "UPDATE articles SET translated_title = ? WHERE id = ?",
+                    (translated_title, article_id),
+                )
+
             await db2.commit()
-            logger.info("Translated title: '%s' -> '%s'", title, translated_title)
+            logger.info("Translated article %d: title='%s' content_len=%d",
+                        article_id, translated_title, len(translated_content or ""))
 
 
 async def _translate_titles() -> list[asyncio.Task]:
