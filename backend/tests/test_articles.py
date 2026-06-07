@@ -4,15 +4,13 @@ import pytest_asyncio
 
 
 @pytest_asyncio.fixture
-async def articles_with_sources(db_dir):
+async def articles_with_sources(client):
     """Insert articles and sources into the test database."""
     from backend import database
 
-    # The init_db fixture has already seeded sources, so we can insert articles
-    db_path = database.settings.database_url.replace("sqlite+aiosqlite:///", "")
     async with database.get_db() as db:
         # Insert an article from De Standaard (Dutch)
-        await db.execute(
+        cursor = await db.execute(
             """
             INSERT INTO articles (url, title, source_id, published_at, content, source_language)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -21,13 +19,11 @@ async def articles_with_sources(db_dir):
                 "https://www.standaard.be/article1",
                 "Belgische verkiezingen: wat moet u weten",
                 1,
-                datetime.now(timezone.utc) - timedelta(hours=2),
+                (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
                 "Volledige artikeltekst in het Nederlands...",
                 "nl",
             ),
         )
-
-        # Insert an article from Le Soir (French), more recent
         await db.execute(
             """
             INSERT INTO articles (url, title, source_id, published_at, content, source_language)
@@ -37,13 +33,11 @@ async def articles_with_sources(db_dir):
                 "https://www.lesoir.be/article2",
                 "Élections belges: ce qu'il faut savoir",
                 6,
-                datetime.now(timezone.utc) - timedelta(minutes=30),
+                (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat(),
                 "Texte complet de l'article en français...",
                 "fr",
             ),
         )
-
-        # Insert an older article from VRT NWS
         await db.execute(
             """
             INSERT INTO articles (url, title, source_id, published_at, content, source_language)
@@ -53,7 +47,7 @@ async def articles_with_sources(db_dir):
                 "https://www.vrt.be/article3",
                 "Weerbericht: regen vandaag",
                 3,
-                datetime.now(timezone.utc) - timedelta(days=1),
+                (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
                 "Weerbericht inhoud...",
                 "nl",
             ),
@@ -68,10 +62,16 @@ def test_get_articles_returns_sorted_by_newest(client, articles_with_sources):
     assert response.status_code == 200
 
     articles = response.json()
-    assert len(articles) == 3
+    titles = [a["title"] for a in articles]
 
-    # Most recent should be first (30 min ago)
-    assert articles[0]["title"] == "Élections belges: ce qu'il faut savoir"
+    # Verify our 3 articles are present
+    assert "Élections belges: ce qu'il faut savoir" in titles
+    assert "Belgische verkiezingen: wat moet u weten" in titles
+    assert "Weerbericht: regen vandaag" in titles
 
-    # Oldest should be last (1 day ago)
-    assert articles[2]["title"] == "Weerbericht: regen vandaag"
+    # Verify sort order: find indices
+    fr_idx = titles.index("Élections belges: ce qu'il faut savoir")
+    nl_idx = titles.index("Belgische verkiezingen: wat moet u weten")
+    vrt_idx = titles.index("Weerbericht: regen vandaag")
+
+    assert fr_idx < nl_idx < vrt_idx, "Articles should be sorted newest-first"

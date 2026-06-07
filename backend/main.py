@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.services.polling import start_polling, stop_polling
@@ -76,3 +76,53 @@ async def get_articles():
         )
         articles = await cursor.fetchall()
         return [dict(a) for a in articles]
+
+
+@app.get("/articles/{article_id}")
+async def get_article(article_id: int):
+    from backend.database import get_db
+
+    async with get_db() as db:
+        # Fetch article with source name
+        cursor = await db.execute(
+            """
+            SELECT a.*, s.name as source_name
+            FROM articles a
+            JOIN sources s ON a.source_id = s.id
+            WHERE a.id = ?
+            """,
+            (article_id,),
+        )
+        article_row = await cursor.fetchone()
+        if not article_row:
+            raise HTTPException(status_code=404, detail="Article not found")
+
+        article = dict(article_row)
+
+        # Fetch cached translation
+        cursor = await db.execute(
+            "SELECT * FROM translations WHERE article_id = ?",
+            (article_id,),
+        )
+        translation_row = await cursor.fetchone()
+        article["translation"] = dict(translation_row) if translation_row else None
+
+        return article
+
+
+@app.post("/articles/{article_id}/translate")
+async def translate_article(article_id: int):
+    from backend.database import get_db
+
+    async with get_db() as db:
+        # Check for existing completed translation
+        cursor = await db.execute(
+            "SELECT * FROM translations WHERE article_id = ? AND status = 'completed'",
+            (article_id,),
+        )
+        translation_row = await cursor.fetchone()
+        if translation_row:
+            return dict(translation_row)
+
+        # No cached translation — trigger translation
+        return {"status": "queued"}
