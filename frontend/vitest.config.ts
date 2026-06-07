@@ -6,6 +6,7 @@ export default defineConfig({
   resolve: {
     alias: {
       $lib: path.resolve(__dirname, "./src/lib"),
+      "$app/stores": path.resolve(__dirname, "src/test-app-stores.ts"),
     },
   },
   plugins: [svelte({})],
