@@ -383,7 +383,7 @@ docker compose up --build
 
 # 3. Open in browser
 # Frontend: http://localhost:5173
-# API Docs: http://localhost:8000/docs
+# API Docs: http://localhost:9000/docs
 ```
 
 ### Development Mode (without Docker)
@@ -391,7 +391,7 @@ docker compose up --build
 # Backend
 cd backend
 pip install -e ".[dev]"
-python -m uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 9000
 
 # Frontend
 cd frontend

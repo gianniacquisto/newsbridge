@@ -4,21 +4,23 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "9000:9000"
     env_file:
       - .env
     volumes:
       - ./backend/data:/app/data
     restart: unless-stopped
-    depends_on:
-      - frontend
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://backend:9000/api
     ports:
       - "5173:5173"
     env_file:
       - .env
+    depends_on:
+      - backend
     restart: unless-stopped

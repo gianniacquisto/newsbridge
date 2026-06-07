@@ -38,7 +38,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-- **Backend API:** http://localhost:8000
+- **Backend API:** http://localhost:9000
 - **Frontend:** http://localhost:5173
 
 ## Architecture

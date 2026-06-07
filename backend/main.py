@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.services.polling import start_polling, stop_polling
@@ -27,9 +27,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+api_router = APIRouter(prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://frontend:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,12 +40,12 @@ app.add_middleware(
 # --- Placeholder routes ---
 
 
-@app.get("/")
+@api_router.get("/")
 async def root():
     return {"message": "Newsbridge API"}
 
 
-@app.get("/health")
+@api_router.get("/health")
 async def health():
     return {"status": "ok"}
 
@@ -51,7 +53,7 @@ async def health():
 # --- API routes ---
 
 
-@app.get("/sources")
+@api_router.get("/sources")
 async def get_sources():
     from backend.database import get_db
 
@@ -61,7 +63,7 @@ async def get_sources():
         return [dict(s) for s in sources]
 
 
-@app.get("/articles")
+@api_router.get("/articles")
 async def get_articles():
     from backend.database import get_db
 
@@ -85,7 +87,7 @@ async def get_articles():
         return result
 
 
-@app.get("/articles/{article_id}")
+@api_router.get("/articles/{article_id}")
 async def get_article(article_id: int):
     from backend.database import get_db
 
@@ -117,7 +119,7 @@ async def get_article(article_id: int):
         return article
 
 
-@app.post("/articles/{article_id}/translate")
+@api_router.post("/articles/{article_id}/translate")
 async def translate_article(article_id: int):
     from backend.database import get_db
 
@@ -133,3 +135,5 @@ async def translate_article(article_id: int):
 
         # No cached translation — trigger translation
         return {"status": "queued"}
+
+app.include_router(api_router)

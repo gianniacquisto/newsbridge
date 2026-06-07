@@ -1,0 +1,1 @@
+const e="/api";async function n(t){const r=await fetch(`${e}${t}`);if(!r.ok)throw new Error(`API error: ${r.status}`);return r.json()}async function a(){return n("/articles")}async function s(t){return n(`/articles/${t}`)}async function c(t){return n(`/articles/${t}/translate`)}export{a,s as g,c as t};
