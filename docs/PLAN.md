@@ -80,7 +80,7 @@ A news aggregation app that ingests Belgian RSS feeds and translates articles to
 │  ┌──────────────────────────────────────────────────┐ │
 │  │           llama-server (llama.cpp)                │ │
 │  │           - Model: gemma/mistral (user's choice)  │ │
-│  │           - Port: 8080                            │ │
+│  │           - Port: 8000                            │ │
 │  │           - Exposes /v1/completions              │ │
 │  └──────────────────────────────────────────────────┘ │
 └───────────────────────────────────────────────────────┘
@@ -355,7 +355,7 @@ All configuration via `.env`:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LLAMA_SERVER_URL` | `http://host.docker.internal:8080` | llama.cpp server address |
+| `LLAMA_SERVER_URL` | `http://host.docker.internal:8000` | llama.cpp server address |
 | `LLM_MODEL` | `gemma:7b` | Model name for llama.cpp |
 | `LLM_MAX_TOKENS` | `4096` | Max output tokens per translation |
 | `LLM_TEMPERATURE` | `0.3` | Temperature for deterministic output |
@@ -367,7 +367,7 @@ All configuration via `.env`:
 ### Prerequisites
 1. **llama.cpp** — Install and run `llama-server` on your host
    ```bash
-   llama-server -m /path/to/model.gguf --port 8080
+   llama-server -m /path/to/model.gguf --port 8000
    ```
 
 2. **Docker Compose** — Install Docker and Docker Compose

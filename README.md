@@ -28,7 +28,7 @@ See [docs/PLAN.md](docs/PLAN.md) for the full implementation plan and current st
 
 ```bash
 # 1. Ensure llama-server is running on your host
-#    llama-server -m /path/to/model --port 8080
+#    llama-server -m /path/to/model --port 8000
 
 # 2. Configure environment
 cp .env.example .env
